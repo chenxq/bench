@@ -2,9 +2,10 @@ import os
 import logging
 import pandas as pd
 from typing import List, Optional, Union
-from arthur_bench.scoring import ScoringMethod, scoring_method_class_from_string
+from arthur_bench.scoring import ScoringMethod
 from arthur_bench.models.models import TestSuiteRequest, PaginatedTestSuite, TestCaseOutput, ScoringMethod as ScoringMethodMetadata, \
 	ScoringMethodType
+from arthur_bench.models.config import LMConfig
 from arthur_bench.client.exceptions import UserValueError, ArthurInternalError, MissingParameterError
 from arthur_bench.client.bench_client import BenchClient
 from arthur_bench.client.local.client import LocalBenchClient
@@ -181,6 +182,39 @@ class TestSuite:
 			run.save()
 			
 		return run
+
+	def run_with_generate(
+			self, 
+			run_name: str, 
+			generation_config: LMConfig,
+		    save: bool = True,
+			batch_size: int = SINGLE_ITEM_BATCH_DEFAULT,
+			model_name: Optional[str] = None,
+			model_version: Optional[str] = None,
+			foundation_model: Optional[str] = None,
+			prompt_template: Optional[str] = None
+	) -> TestRun:
+		model = generation_config.to_evaluator()
+
+		candidates: List[str] = []
+		for case in self.suite.test_cases:
+			resp = model(case.input)
+			if isinstance(resp, dict):
+				resp = resp.get("text")
+				if resp is None:
+					raise ValueError("expected model response to contain text")
+			candidates.append(resp)
+
+		return self.run(
+			run_name=run_name, 
+		  	candidate_output_list=candidates, 
+		  	save=save, 
+		  	batch_size=batch_size, 
+		  	model_name=model_name, 
+		  	model_version=model_version, 
+		  	foundation_model=foundation_model,
+		  	prompt_template=prompt_template
+		)
 
 	def save(self):
 		"""Save a test suite to local file system."""
