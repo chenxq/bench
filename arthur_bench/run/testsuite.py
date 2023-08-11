@@ -205,6 +205,15 @@ class TestSuite:
 					raise ValueError("expected model response to contain text")
 			candidates.append(resp)
 
+		if model_name is None:
+			model_name = str(generation_config)
+
+		if prompt_template is None:
+			prompt_template = str(generation_config.prompt)
+
+		if foundation_model is None:
+			foundation_model = generation_config.model_name
+		  
 		return self.run(
 			run_name=run_name, 
 		  	candidate_output_list=candidates, 
