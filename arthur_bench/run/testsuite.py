@@ -1,4 +1,3 @@
-import os
 import logging
 import pandas as pd
 from typing import List, Optional, Union
@@ -10,15 +9,12 @@ from arthur_bench.models.models import (
     ScoringMethod as ScoringMethodMetadata,
     ScoringMethodType,
 )
-from arthur_bench.models.config import LMConfig
+
 from arthur_bench.client.exceptions import (
     UserValueError,
     ArthurInternalError,
-    MissingParameterError,
 )
-from arthur_bench.client.bench_client import BenchClient
-from arthur_bench.client.local.client import LocalBenchClient
-from arthur_bench.client.rest.client import ArthurClient
+from arthur_bench.client import BenchClient, _get_bench_client
 from arthur_bench.run.testrun import TestRun
 from arthur_bench.run.utils import (
     _initialize_metadata,
@@ -27,6 +23,7 @@ from arthur_bench.run.utils import (
     _get_suite_if_exists,
     _initialize_scoring_method,
 )
+
 from arthur_bench.scoring.scoring_method import SINGLE_ITEM_BATCH_DEFAULT
 
 
@@ -60,24 +57,16 @@ class TestSuite:
         reference_column: str = "reference_output",
         input_text_list: Optional[List[str]] = None,
         reference_output_list: Optional[List[str]] = None,
-        client: Optional[type[BenchClient]] = None,
+        client: Optional[BenchClient] = None,
     ):
-        url = os.getenv("ARTHUR_API_URL")
+        self.suite: PaginatedTestSuite
         if client is None:
-            if url:  # if remote url is specified use remote client
-                api_key = os.getenv("ARTHUR_API_KEY")
-                if api_key is None:
-                    raise MissingParameterError(
-                        "You must provide an api key when using remote url"
-                    )
-                client = ArthurClient(url=url, api_key=api_key).bench  # type: ignore
-            else:
-                client = LocalBenchClient()  # type: ignore
-        self.client: BenchClient = client  # type: ignore
-        self.suite: PaginatedTestSuite = _get_suite_if_exists(self.client, name)  # type: ignore
+            client = _get_bench_client()
+        self.client = client
+        suite = _get_suite_if_exists(self.client, name)
         self.scorer: ScoringMethod
 
-        if self.suite is None:
+        if suite is None:
             # TODO: separate load functionality? so large models aren't getting loaded unecessarily if test suite creation fails
             self.scorer = _initialize_scoring_method(scoring_method_arg=scoring_method)
             cases = _load_suite_from_args(
@@ -108,6 +97,7 @@ class TestSuite:
                 f"Found existing test suite with name {name}. Using existing suite"
             )
 
+            self.suite = suite
             if self.suite.scoring_method.type == ScoringMethodType.Custom:
                 if isinstance(scoring_method, str):
                     raise UserValueError(

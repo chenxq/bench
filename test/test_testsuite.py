@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pytest
 import pandas as pd
 from unittest import mock
@@ -24,10 +25,6 @@ from fixtures.mock_configs import (
 )
 
 
-@pytest.fixture(scope="session")
-def bench_temp_dir(tmpdir_factory):
-    tmpdir = str(tmpdir_factory.mktemp("bench"))
-    return tmpdir
 
 
 @pytest.fixture
@@ -64,8 +61,7 @@ class MockScoringMethod(ScoringMethod):
         input_text_batch: Optional[List[str]] = None,
         context_batch: Optional[List[str]] = None,
     ) -> List[float]:
-        return [0.8 for _ in range(len(reference_batch))]
-
+        return [0.9, 0.7]
 
 class CustomScorer(ScoringMethod):
     def __init__(self, custom_name="param_name"):
@@ -136,7 +132,7 @@ def test_create_test_suite(params, expected, mock_client):
     suite.client.get_test_suites.assert_called_once_with(name=params["name"])
     suite.client.create_test_suite.assert_called_once()
     _, args, _ = suite.client.create_test_suite.mock_calls[0]
-    assert_test_suite_equal(args[0], expected)
+    assert_test_suite_equal(args[0], expected, check_page=False)
 
 
 @pytest.mark.parametrize("candidate_column", ["custom_candidate", None])
