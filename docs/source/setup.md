@@ -24,7 +24,7 @@ Bench spins up a local UI (like [tensorboard](https://www.tensorflow.org/tensorb
 
 ### View Examples
 
-Running these commands will view launch the bench UI locally ot view the example test suites from the Arthur Bench github rep.
+Running these commands will view launch the bench UI locally to view the example test suites from the Arthur Bench github rep.
 
 ```
 # clone the bench repo
